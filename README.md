@@ -1,0 +1,1 @@
+Resources for my Text Mining with R course (Mar 8-9, 2018)
