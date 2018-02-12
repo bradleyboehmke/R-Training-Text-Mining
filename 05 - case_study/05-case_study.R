@@ -1,9 +1,17 @@
+
+# Prerequisites -----------------------------------------------------------
+
+# package prereqs
+library(tidyverse)
+library(tidytext)
+
+# data prereq
 airbnb <- read_rds("data/airbnb.rds")
 
-airbnb %>%
-  select(id, description) %>%
-  unnest_tokens(words, description)
+
+# Task 1 ------------------------------------------------------------------
 
 airbnb %>%
   select(id, description) %>%
-  unnest_tokens(words, description, token = "ngrams", n = 2)
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words)
