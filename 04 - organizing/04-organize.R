@@ -98,6 +98,8 @@ text_tb %>% unnest_tokens(word, text, token = "lines")
 text_tb %>% unnest_tokens(word, text, token = "ngrams", n = 2)
 
 # YOUR TURN!
+# Unnest the deathly_hallows text into single words and bi-grams
+
 
 
 # Stop Words --------------------------------------------------------------
@@ -117,6 +119,7 @@ text_tb %>%
   count(word, sort = TRUE)
 
 # YOUR TURN!
+# Unnest the deathly_hallows book and remove the stop words.
 
 
 # Frequency Analysis ------------------------------------------------------
@@ -147,8 +150,10 @@ text_tb %>%
 text_tb %>% 
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
   separate(bigram, c("word1", "word2"), sep = " ") %>%
-  filter(!word1 %in% stop_words$word) %>%
-  filter(!word2 %in% stop_words$word) %>% 
+  filter(
+    !word1 %in% stop_words$word,
+    !word2 %in% stop_words$word
+  ) %>% 
   count(word1, word2, sort = TRUE)
 
 # if we want to visualize bi-grams
@@ -179,7 +184,12 @@ tibble(
     !word2 %in% stop_words$word,
     !word3 %in% stop_words$word
   ) %>%
-  count(word1, word2, word3, sort = TRUE)
+  count(word1, word2, word3, sort = TRUE) %>%
+  unite(trigram, word1:word3, sep = " ") %>%
+  top_n(10) %>%
+  ggplot(aes(reorder(trigram, n), n)) +
+  geom_col() +
+  coord_flip()
 
 
 
