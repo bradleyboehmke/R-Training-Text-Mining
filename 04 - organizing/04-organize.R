@@ -204,6 +204,60 @@ series %>%
 # problem is, we have many different sized documents
 map(books, str_count) %>% map_dbl(sum)
 
+# comparing pairwise correlation within a document
+ph_cor <- tibble(
+  title   = "Philosopher's Stone",
+  chapter = seq_along(philosophers_stone),
+  text    = philosophers_stone
+) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  filter(n() >= 50) %>%
+  widyr::pairwise_cor(word, chapter, sort = TRUE)
+
+filter(ph_cor, item1 == "harry")
+
+# comparing across two documents
+df1 <- tibble(
+  title   = "Philosopher's Stone",
+  chapter = seq_along(philosophers_stone),
+  text    = philosophers_stone
+) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+df2 <- tibble(
+  title   = "Deathly Hallows",
+  chapter = seq_along(deathly_hallows),
+  text    = deathly_hallows
+) %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+combined <- df1 %>%
+  rbind(df2) %>%
+  filter(str_detect(word, "[a-z']+")) %>%
+  count(title, word) %>%
+  group_by(title) %>%
+  mutate(pct = n / sum(n)) %>%
+  select(-n) %>%
+  spread(title, pct) %>%
+  na.omit() %>%
+  mutate(delta = abs(`Deathly Hallows` - `Philosopher's Stone`))
+  
+# we can plot the output
+ggplot(combined, aes(x = `Philosopher's Stone`, y = `Deathly Hallows`, color = delta)) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.2, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE) +
+  scale_x_log10("Philosopher's Stone", labels = scales::percent) +
+  scale_y_log10("Deathly Hallows", labels = scales::percent) +
+  scale_color_gradient(limits = c(0, 0.001), low = "darkslategray4", high = "gray75") +
+  theme(legend.position = "none")
+
+# or compute correlation
+cor.test(combined$`Deathly Hallows`, combined$`Philosopher's Stone`)
+
 # sometimes proportions are better
 # 1. clean
 clean_tokens <- series %>%
