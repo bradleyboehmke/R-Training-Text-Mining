@@ -33,7 +33,7 @@ task1_df %>%
   arrange(pct) %>%
   mutate(rank = 1:n()) %>%
   ggplot(aes(reorder(word, rank), pct, fill = property_type)) +
-  geom_col() +
+  geom_col(show.legend = FALSE) +
   scale_y_continuous(NULL, labels = scales::percent) +
   coord_flip() +
   facet_wrap(~ property_type, scales = "free_y")
@@ -112,10 +112,33 @@ airbnb %>%
   anti_join(stop_words) %>%
   count(word, sort = TRUE)
 
-# price difference between properties that provide and do not provide internet
-airbnb %>%
+# how many properties are kid friendly
+kid_df <- airbnb %>%
   select(price, amenities) %>%
-  mutate(internet = str_detect(amenities, regex("kid", ignore_case = TRUE))) 
+  mutate(kids = str_detect(amenities, regex("kid friendly", ignore_case = TRUE)))
+
+kid_df %>%
+  count(kids) %>%
+  mutate(pct = n / sum(n))
   
+# price difference between properties that are kid friendly
+kid_price <- kid_df %>%
+  mutate(
+    price = str_replace_all(price, "(\\$)|(,)|(\\..*)", ""),
+    price = str_trim(price) %>% as.numeric()
+    )
+
+p1 <- ggplot(kid_price, aes(price, kids)) +
+  ggridges::geom_density_ridges(alpha = .5) +
+  scale_x_log10(labels = scales::dollar)
+
+p2 <- ggplot(kid_price, aes(kids, price)) +
+  geom_boxplot() +
+  scale_y_log10(labels = scales::dollar) +
+  coord_flip()
+
+gridExtra::grid.arrange(p1, p2, ncol = 1)
+
+t.test(log(price) ~ kids, data = kid_price)
 
 
