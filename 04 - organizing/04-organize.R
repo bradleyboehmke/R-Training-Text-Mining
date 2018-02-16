@@ -80,8 +80,23 @@ for(i in seq_along(books)) {
 series
 
 # YOUR TURN!
+files <- list.files(path = "data", pattern = "\\.txt")
+all_3 <- tibble()
 
+for(i in seq_along(files)) {
+  
+  name <- files[1]
+  path <- paste0("data/", name)
+  data <- read.delim(path, header = FALSE, stringsAsFactors = FALSE) %>%
+    as_tibble() %>%
+    mutate(file = name) %>%
+    select(file, text = V1)
+  all_3 <- rbind(all_3, data)
+  
+}
 
+all_3
+  
 
 # Unnesting ---------------------------------------------------------------
 
