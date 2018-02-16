@@ -28,25 +28,25 @@ ps_df <- tibble(
 ) %>%
   unnest_tokens(word, text)
 
+# we can get overall positive vs. negative with the Bing lexicon
+ps_df %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(sentiment, sort = TRUE)
+
 # notice how "boy" and "proud" have more than one feeling
 ps_df %>%
-  inner_join((get_sentiments("nrc")))
+  inner_join(get_sentiments("nrc"))
 
 # we can see the book is slightly more negative than positive and "sadness" and
 # "anger" are the top emotions identified
 ps_df %>%
-  inner_join((get_sentiments("nrc"))) %>%
-  count(sentiment, sort = TRUE)
-
-# we get a similar result with the Bing lexicon
-ps_df %>%
-  inner_join((get_sentiments("bing"))) %>%
+  inner_join(get_sentiments("nrc")) %>%
   count(sentiment, sort = TRUE)
 
 # YOUR TURN!
 # Using the AFINN lexicon, can you rank-order the chapters by sentiment score?
 ps_df %>%
-  inner_join((get_sentiments("afinn"))) %>%
+  inner_join(get_sentiments("afinn")) %>%
   group_by(chapter) %>%
   summarise(score = sum(score)) %>%
   arrange(desc(score))
