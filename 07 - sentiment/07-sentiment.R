@@ -3,6 +3,8 @@
 
 library(tidyverse)
 library(tidytext)
+library(sentimentr)
+library(magrittr)
 library(harrypotter)
 
 
@@ -110,5 +112,62 @@ rbind(dh_bing, dh_afinn) %>%
 rbind(dh_bing, dh_afinn) %>%
   group_by(lexicon) %>%
   filter(sentiment > quantile(sentiment, probs = .995) | sentiment < quantile(sentiment, probs = .005))
+
+
+
+# What is driving sentiment -----------------------------------------------
+
+bing_word_counts <- ps_df %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE)
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ggplot(aes(reorder(word, n), n, fill = sentiment)) +
+  geom_bar(alpha = 0.8, stat = "identity", show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment", x = NULL) +
+  coord_flip()
+
+
+# Risk of negation --------------------------------------------------------
+
+# option 1
+ps_lines <- tibble(
+  chapter = seq_along(philosophers_stone),
+  text    = philosophers_stone
+) %>%
+  unnest_tokens(sentence_text, text, token = "sentences") %>%
+  mutate(sentence = 1:n()) %>%
+  unnest_tokens(word, sentence_text)
+
+ps_lines %>%
+  inner_join(get_sentiments("afinn")) %>%
+  group_by(sentence) %>%
+  summarize(score = sum(score, na.rm = TRUE))
+
+# option 2
+ch_sentiment <- tibble(
+  chapter = seq_along(philosophers_stone),
+  text    = philosophers_stone
+) %$%
+  sentiment_by(
+    get_sentences(text),
+    list(chapter)
+  )
+
+plot(ch_sentiment)
+plot(uncombine(ch_sentiment))
+
+ch_sentiment %>%
+  uncombine() %>%
+  ggplot(aes(factor(element_id), sentiment)) +
+  geom_jitter(alpha = .1, width = .1, height = 0) +
+  geom_boxplot(outlier.shape = NA, alpha = .25) +
+  stat_summary(fun.y = "mean", geom = "point", size = 3, color = "red")
+
+
+# Identifying sentiment in Airbnb data ------------------------------------
 
 
