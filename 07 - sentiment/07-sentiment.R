@@ -170,4 +170,78 @@ ch_sentiment %>%
 
 # Identifying sentiment in Airbnb data ------------------------------------
 
+files <- list.files(path = "data", pattern = "\\.txt")
+all_3 <- tibble()
 
+for(i in seq_along(files)) {
+  
+  name <- files[i]
+  path <- paste0("data/", name)
+  data <- read.delim(path, header = FALSE, stringsAsFactors = FALSE) %>%
+    as_tibble() %>%
+    mutate(file = name) %>%
+    select(file, text = V1)
+  all_3 <- rbind(all_3, data)
+  
+}
+
+all_3
+
+
+
+# Big Your Turn! ----------------------------------------------------------
+
+# Review files
+amazon <- mutate(kotzias_reviews_amazon_cells, file = "amazon")
+imdb   <- mutate(kotzias_reviews_imdb, file = "imdb")
+yelp   <- mutate(kotzias_reviews_yelp, file = "yelp")
+
+all_3 <- amazon %>%
+  rbind(imdb) %>%
+  rbind(yelp) %>%
+  as_tibble()
+
+# 1. Rank order the three review files by overall positive vs. negative sentiment.
+all_3 %$%
+  sentiment_by(
+    get_sentences(text),
+    list(file)
+  ) %>%
+  plot()
+
+# 2. Identify the top 5 emotions in each file.
+all_3 %>%
+  select(file, text) %>%
+  unnest_tokens(word, text) %>%
+  inner_join(get_sentiments("nrc")) %>%
+  count(file, sentiment) %>%
+  filter(!sentiment %in% c("positive", "negative")) %>%
+  group_by(file) %>%
+  top_n(5) %>%
+  ggplot(aes(drlib::reorder_within(sentiment, n, file), n, fill = file)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ file, ncol = 1, scales = "free_y") +
+  coord_flip()
+
+# 3. Within each file can you identify the most negative review?
+net_sentiment <- all_3 %$%
+  sentiment_by(
+    get_sentences(text),
+    list(file)
+  ) %>%
+  uncombine()
+
+net_sentiment %>%
+  group_by(file) %>%
+  filter(sentiment == min(sentiment))
+
+all_3 %>%
+  filter(row_number() %in% c(822, 1771, 3109))
+
+# 4. Within each file can you identify the most positive review?
+net_sentiment %>%
+  group_by(file) %>%
+  filter(sentiment == max(sentiment))
+
+all_3 %>%
+  filter(row_number() %in% c(583, 1687, 2594))
