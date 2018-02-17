@@ -85,12 +85,11 @@ all_3 <- tibble()
 
 for(i in seq_along(files)) {
   
-  name <- files[1]
+  name <- files[i]
   path <- paste0("data/", name)
-  data <- read.delim(path, header = FALSE, stringsAsFactors = FALSE) %>%
-    as_tibble() %>%
+  data <- read_tsv(path, col_names = FALSE) %>%
     mutate(file = name) %>%
-    select(file, text = V1)
+    select(file, text = X1)
   all_3 <- rbind(all_3, data)
   
 }
