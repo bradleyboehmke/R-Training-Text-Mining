@@ -45,7 +45,7 @@ reviews %>%
   facet_wrap(~ property_type, scales = "free") +
   coord_flip()
 
-# tf-idf in airbnb reviews
+# Your Turn!
 reviews %>%
   select(property_type, comments) %>%
   filter(property_type %in% c("Apartment", "House")) %>%
@@ -65,4 +65,53 @@ reviews %>%
   facet_wrap(~ property_type, scales = "free") +
   coord_flip()
 
-  
+# What if we want to understand the unique differences between the top 4 most
+# reviewed neighborhoods
+reviews %>%
+  count(neighbourhood_cleansed, sort = TRUE)
+
+# bi-gram term frequency of these neighborhoods  
+reviews %>%
+  select(neighborhood = neighbourhood_cleansed, comments) %>%
+  filter(neighborhood %in% c("Jamaica Plain", "South End",
+                                       "Dorchester", "East Boston")) %>%
+  unnest_tokens(word, comments, token = "ngrams", n = 2) %>%
+  separate(word, into = c("word1", "word2"), sep = " ") %>%
+  filter(
+    !word1 %in% stop_words$word,
+    !word2 %in% stop_words$word
+  ) %>%
+  unite(word, word1, word2) %>%
+  count(neighborhood, word, sort = TRUE) %>%
+  group_by(neighborhood) %>%
+  top_n(5) %>%
+  ggplot(aes(drlib::reorder_within(word, n, neighborhood, sep = "."), n)) +
+  geom_col() +
+  facet_wrap(~ neighborhood, scales = "free") +
+  coord_flip()
+
+# Your turn!
+reviews %>%
+  select(neighborhood = neighbourhood_cleansed, comments) %>%
+  filter(neighborhood %in% c("Jamaica Plain", "South End",
+                             "Dorchester", "East Boston")) %>%
+  unnest_tokens(word, comments, token = "ngrams", n = 2) %>%
+  separate(word, into = c("word1", "word2"), sep = " ") %>%
+  filter(
+    !word1 %in% stop_words$word,
+    !word2 %in% stop_words$word
+  ) %>%
+  unite(word, word1, word2) %>%
+  count(neighborhood, word, sort = TRUE) %>%
+  bind_tf_idf(word, neighborhood, n) %>%
+  group_by(neighborhood) %>%
+  top_n(5) %>%
+  ggplot(aes(drlib::reorder_within(word, tf_idf, neighborhood, sep = "."), tf_idf)) +
+  geom_col() +
+  facet_wrap(~ neighborhood, scales = "free") +
+  coord_flip()
+
+
+# Word networks -----------------------------------------------------------
+
+
