@@ -149,24 +149,28 @@ reviews %>%
 
 # we can use this information to create a word network
 
-library(igraph)
-
-## 1. we create document term matrix (this time without stopwords)
-neighborhood_dtm <- reviews %>%
-  select(neighborhood = neighbourhood_cleansed, comments) %>%
-  unnest_tokens(word, comments) %>%
-  count(neighborhood, word) %>%
-  cast_dtm(neighborhood, word, n)
-
-## 2. create adjacency matrix
-neighborhood_adj.m <- as.matrix(neighborhood_dtm) %*% t(as.matrix(neighborhood_dtm))
-                                    
-neighborhood_adj.m %>%
-  graph.adjacency(weighted = TRUE, mode = "undirected", diag = T) %>%
-  simplify() %>%
-  plot.igraph(vertex.color = "gray95")
-
 library(qdap)
+
+# filter for shorter reviews
+short_reviews <- reviews %>% 
+  mutate(words = str_count(comments)) %>% 
+  filter(words < 50) %>%
+  select(review_id, comments, neighborhood = neighbourhood_cleansed) 
+
+word_network_plot(text.var = short_reviews$comments)
+
+# word networks are primarily useful for small text or text without much 
+# word diversity
+
+
+
+
+
+
+
+
+
+
 
 
 
