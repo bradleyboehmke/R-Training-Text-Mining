@@ -5,6 +5,8 @@
 library(tidyverse)
 library(tidytext)
 library(harrypotter)
+library(tm)
+
 
 # example data (harry potter)
 ps_df <- tibble(
@@ -113,5 +115,58 @@ reviews %>%
 
 
 # Word networks -----------------------------------------------------------
+
+# convert to a document term matrix
+ps_dtm <- ps_df %>%
+  unnest_tokens(word, text) %>%
+  count(chapter, word) %>%
+  cast_dtm(chapter, word, n)
+
+tm::findAssocs(ps_dtm, "wand", .9)
+
+# Your Turn!
+# find words most correlated with "izzy"
+reviews %>%
+  select(review_id, comments) %>%
+  unnest_tokens(word, comments) %>%
+  count(review_id, word) %>%
+  cast_dtm(review_id, word, n) %>%
+  findAssocs("izzy", .25)
+
+# find words most correlated with "rooftop deck"
+reviews %>%
+  select(review_id, comments) %>%
+  unnest_tokens(word, comments, token = "ngrams", n = 2) %>%
+  separate(word, into = c("word1", "word2"), sep = " ") %>%
+  filter(
+    !word1 %in% stop_words$word,
+    !word2 %in% stop_words$word
+  ) %>%
+  unite(word, word1, word2, sep = " ") %>%
+  count(review_id, word) %>%
+  cast_dtm(review_id, word, n) %>%
+  findAssocs("rooftop deck", .15)
+
+# we can use this information to create a word network
+
+library(igraph)
+
+## 1. we create document term matrix (this time without stopwords)
+neighborhood_dtm <- reviews %>%
+  select(neighborhood = neighbourhood_cleansed, comments) %>%
+  unnest_tokens(word, comments) %>%
+  count(neighborhood, word) %>%
+  cast_dtm(neighborhood, word, n)
+
+## 2. create adjacency matrix
+neighborhood_adj.m <- as.matrix(neighborhood_dtm) %*% t(as.matrix(neighborhood_dtm))
+                                    
+neighborhood_adj.m %>%
+  graph.adjacency(weighted = TRUE, mode = "undirected", diag = T) %>%
+  simplify() %>%
+  plot.igraph(vertex.color = "gray95")
+
+library(qdap)
+
 
 
