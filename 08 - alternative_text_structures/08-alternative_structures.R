@@ -167,32 +167,134 @@ word_network_plot(text.var = short_reviews$comments)
 
 library(factoextra)
 
-farm_ads <- read_table2("data/farm-ads", col_names = FALSE)
+# resume files
+url <- "https://raw.githubusercontent.com/kwartler/text_mining/master/1yr_plus_final4.csv"
+resumes <- read_csv(url)
 
-ads_dtm <- farm_ads %>%
-  filter(X1 == 1) %>%
-  mutate(id = row_number(X1)) %>%
-  gather(variable, keyword, X2:X12) %>%
-  count(id, keyword) %>%
-  cast_dtm(id, keyword, n) %>%
+# create a scaled document term matrix with our resume data
+resumes_dtm <- resumes %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  filter(!str_detect(word, "[[:digit:]]")) %>%
+  count(num, word) %>%
+  cast_dtm(num, word, n) %>%
   scale()
 
-dim(ads_dtm)
-head(ads_dtm[1:5, 1:5])
+# what does our dtm look like?
+dim(resumes_dtm)
+resumes_dtm[1:5, 1:5]
 
-distance <- get_dist(ads_dtm)
+# we can measure the "similarity" between each document based on word usage
+distance1 <- get_dist(resumes_dtm)
 fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
 
-ads_k3 <- kmeans(ads_dtm, centers = 3, nstart = 10)
-str(ads_k3)
+# identify 3 clusters
+k3 <- kmeans(resumes_dtm, centers = 3, nstart = 25)
+str(k3)
+table(k3$cluster)
 
-
+# is there an optimal number of clusters?
 set.seed(123)
-fviz_nbclust(ads_dtm, kmeans, method = "wss")
-fviz_nbclust(ads_dtm, kmeans, method = "silhouette")
-
-ads_k10 <- kmeans(ads_dtm, centers = 10, nstart = 10)
-ads_k10$size
+fviz_nbclust(resumes_dtm, kmeans, method = "wss")
+fviz_nbclust(resumes_dtm, kmeans, method = "silhouette")
 
 
+# let's look at a different type of clustering - Spherical k-means clustering
+library(skmeans)
+library(clue)
 
+sk3 <- skmeans(resumes_dtm, 3, m = 1.2, control = list(nruns = 5, verbose = TRUE))
+str(sk3)
+table(sk3$cluster)
+silhouette(sk3) %>% plot()
+
+# let's loop through and adjust the k and m and assess median silhouette
+tuning_grid <- expand.grid(
+  k = 2:10,
+  m = seq(1, 2, by = 0.1),
+  silhouette = NA
+)
+
+for (i in 1:nrow(tuning_grid)) {
+  model <- skmeans(
+    resumes_dtm, tuning_grid[i, 1], 
+    m = tuning_grid[i, 2], 
+    control = list(nruns = 5))
+  
+  tuning_grid[i, 3] <- median(silhouette(model)[, 3])
+}
+
+tuning_grid %>% filter(silhouette == max(silhouette))
+sk2 <- skmeans(resumes_dtm, 2, m = 1.2, control = list(nruns = 5, verbose = TRUE))
+sk2_results <- t(cl_prototypes(sk2))
+sort(sk2_results[, 1], decreasing = TRUE)[1:10]
+sort(sk2_results[, 2], decreasing = TRUE)[1:10]
+
+# Your Turn - Part 1!
+# can you import and combine, the 10 articles for the 10 authors in the
+# data/news_articles folder?
+files <- list.files(path = "data/news_articles") %>% 
+  map_chr(~ paste0("data/news_articles/", ., "/")) %>%
+  map(~ paste0(., list.files(path = ., pattern = "\\.txt"))) %>%
+  unlist()
+
+articles <- tibble()
+
+for(i in seq_along(files)) {
+  # import article
+  text <- read_table(files[i], col_names = FALSE) %>%
+    mutate(id = i) %>%
+    select(id, text = X1)
+  
+  # combine
+  articles <- rbind(articles, text)
+}
+
+# Your Turn - Part 2!
+# can you now tidy this data set and prepare for cluster analysis?
+
+articles_dtm <- articles %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(id, word) %>%
+  filter(
+    !str_detect(word, "[[:digit:]]"),
+    n > 1
+    ) %>%
+  cast_dtm(id, word, n) %>%
+  scale()
+
+dim(articles_dtm)
+articles_dtm[1:5, 1:5]
+
+# Your Turn - Part 3!
+# Choose any of the cluster analysis approaches and apply. How many clusters
+# do you find?
+tuning_grid <- expand.grid(
+  k = 2:9,
+  m = seq(1, 2, by = 0.1),
+  silhouette = NA
+)
+
+for (i in 1:nrow(tuning_grid)) {
+  model <- skmeans(
+    articles_dtm, tuning_grid[i, 1], 
+    m = tuning_grid[i, 2], 
+    control = list(nruns = 5))
+  
+  tuning_grid[i, 3] <- median(silhouette(model)[, 3])
+}
+
+tuning_grid %>% filter(silhouette == max(silhouette))
+sk8 <- skmeans(articles_dtm, 8, m = 1.1, control = list(nruns = 5, verbose = TRUE))
+sk8_df <- t(cl_prototypes(sk8))
+
+sk8_df %>%
+  as_tibble() %>%
+  mutate(word = row.names(sk8_df)) %>%
+  gather(k, silhouette, -word) %>%
+  group_by(k) %>%
+  top_n(10) %>%
+  ggplot(aes(silhouette, reorder(word, silhouette))) +
+  geom_point() +
+  facet_wrap(~ k, scales = "free_y")
