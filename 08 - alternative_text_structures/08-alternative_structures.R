@@ -163,14 +163,36 @@ word_network_plot(text.var = short_reviews$comments)
 # word diversity
 
 
+# Cluster analysis --------------------------------------------------------
+
+library(factoextra)
+
+farm_ads <- read_table2("data/farm-ads", col_names = FALSE)
+
+ads_dtm <- farm_ads %>%
+  filter(X1 == 1) %>%
+  mutate(id = row_number(X1)) %>%
+  gather(variable, keyword, X2:X12) %>%
+  count(id, keyword) %>%
+  cast_dtm(id, keyword, n) %>%
+  scale()
+
+dim(ads_dtm)
+head(ads_dtm[1:5, 1:5])
+
+distance <- get_dist(ads_dtm)
+fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+
+ads_k3 <- kmeans(ads_dtm, centers = 3, nstart = 10)
+str(ads_k3)
 
 
+set.seed(123)
+fviz_nbclust(ads_dtm, kmeans, method = "wss")
+fviz_nbclust(ads_dtm, kmeans, method = "silhouette")
 
-
-
-
-
-
+ads_k10 <- kmeans(ads_dtm, centers = 10, nstart = 10)
+ads_k10$size
 
 
 
