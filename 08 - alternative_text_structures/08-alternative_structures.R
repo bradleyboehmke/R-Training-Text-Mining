@@ -114,7 +114,7 @@ reviews %>%
   coord_flip()
 
 
-# Word networks -----------------------------------------------------------
+# Word Networks -----------------------------------------------------------
 
 # convert to a document term matrix
 ps_dtm <- ps_df %>%
@@ -163,7 +163,9 @@ word_network_plot(text.var = short_reviews$comments)
 # word diversity
 
 
-# Cluster analysis --------------------------------------------------------
+
+
+# Cluster Analysis --------------------------------------------------------
 
 library(factoextra)
 
@@ -242,9 +244,10 @@ articles <- tibble()
 
 for(i in seq_along(files)) {
   # import article
-  text <- read_table(files[i], col_names = FALSE) %>%
+  text <- read_file(files[i]) %>%
+    as_tibble() %>%
     mutate(id = i) %>%
-    select(id, text = X1)
+    select(id, text = value)
   
   # combine
   articles <- rbind(articles, text)
@@ -298,3 +301,189 @@ sk8_df %>%
   ggplot(aes(silhouette, reorder(word, silhouette))) +
   geom_point() +
   facet_wrap(~ k, scales = "free_y")
+
+
+
+# Topic Modeling ----------------------------------------------------------
+
+# package for topic modeling
+library(topicmodels)
+
+# What are the main topics or themes in the Harry Potter Series?
+
+# combine all books
+titles <- c("Philosopher's Stone", "Chamber of Secrets", "Prisoner of Azkaban",
+            "Goblet of Fire", "Order of the Phoenix", "Half-Blood Prince",
+            "Deathly Hallows")
+
+books <- list(philosophers_stone, chamber_of_secrets, prisoner_of_azkaban,
+              goblet_of_fire, order_of_the_phoenix, half_blood_prince,
+              deathly_hallows)
+
+series <- tibble()
+
+for(i in seq_along(titles)) {
+  
+  clean <- tibble(
+    chapter = seq_along(books[[i]]),
+    text    = books[[i]]
+    ) %>%
+    unnest_tokens(word, text) %>%
+    mutate(book = titles[i]) %>%
+    select(book, everything())
+  
+  series <- rbind(series, clean)
+}
+
+series$book <- factor(series$book, levels = rev(titles))
+series
+
+
+# first we turn into a document term matrix
+df_dtm <- series %>%
+  anti_join(stop_words) %>%
+  unite(document, book, chapter) %>%
+  count(document, word) %>%
+  cast_dtm(document, word, n)
+
+# LDA on satisfaction categories
+levels_lda <- LDA(df_dtm, k = 7, control = list(seed = 1234))
+levels_lda
+
+# get per-topic-per-word probabilities
+levels_topics <- tidy(levels_lda, matrix = "beta")
+levels_topics %>% arrange(desc(beta))
+
+# top 10 terms within each topic
+levels_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free", ncol = 2) +
+  coord_flip()
+
+# per-document-per-topic probabilities  
+levels_gamma <- tidy(levels_lda, matrix = "gamma")
+levels_gamma
+
+levels_gamma %>%
+  separate(document, into = c("book", "chapter"), sep = "_") %>%
+  ggplot(aes(factor(topic), gamma)) +
+  geom_boxplot() +
+  facet_wrap(~ book, ncol = 2)
+
+# DO NOT RUN IN CLASS ----> takes about 15 min
+# find optimal number of topics
+# install.packages("ldatuning")
+library(ldatuning)
+
+result <- FindTopicsNumber(
+  df_dtm,
+  topics = seq(from = 2, to = 15, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+
+FindTopicsNumber_plot(result)
+
+
+# Your Turn - Part 1!
+# can you import and combine, the 10 articles for the 10 authors in the
+# data/news_articles folder?
+files <- list.files(path = "data/news_articles") %>% 
+  map_chr(~ paste0("data/news_articles/", ., "/")) %>%
+  map(~ paste0(., list.files(path = ., pattern = "\\.txt"))) %>%
+  unlist()
+
+articles <- tibble()
+
+for(i in seq_along(files)) {
+  # import article
+  text <- read_file(files[i]) %>%
+    as_tibble() %>%
+    mutate(id = i) %>%
+    select(id, text = value)
+  
+  # combine
+  articles <- rbind(articles, text)
+}
+
+# Your Turn - Part 2!
+# can you now tidy this data set and prepare for topic modeling?
+
+articles_dtm <- articles %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(id, word) %>%
+  filter(
+    !str_detect(word, "[[:digit:]]"),
+    n > 1
+  ) %>%
+  cast_dtm(id, word, n)
+
+# Your Turn - Part 3!
+# Perform topic modeling.
+
+## Step 1: identify number of topics
+result <- FindTopicsNumber(
+  articles_dtm,
+  topics = seq(from = 2, to = 50, by = 2),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+
+FindTopicsNumber_plot(result)
+
+## Step 2: assess 24 topics
+articles_lda <- LDA(articles_dtm, k = 24, control = list(seed = 1234))
+
+## Step 3: assess per-topic-per-word probabilities
+### get per-topic-per-word probabilities
+articles_lda %>% 
+  tidy(matrix = "beta") %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  mutate(term = reorder(term, beta)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free", ncol = 4) +
+  coord_flip()
+
+### per-document-per-topic probabilities  
+### visual one
+articles_lda %>%
+  tidy(matrix = "gamma") %>%
+  group_by(document) %>%
+  top_n(1, wt = gamma) %>%
+  ggplot(aes(reorder(document, topic), topic)) +
+  geom_point()
+
+### visual two: illustrates potential topic misallocation
+rank <- articles_lda %>%
+  tidy(matrix = "gamma") %>%
+  group_by(document) %>%
+  top_n(1, wt = gamma) %>%
+  ungroup() %>%
+  mutate(rank = 1:n()) %>%
+  select(document, rank)
+
+articles_lda %>%
+  tidy(matrix = "gamma") %>%
+  left_join(rank) %>%
+  ggplot(aes(reorder(document, rank), topic, alpha = gamma)) +
+  geom_point()
+
+
+
