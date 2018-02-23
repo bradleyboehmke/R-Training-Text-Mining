@@ -6,6 +6,7 @@ library(tidyverse)
 library(tidytext)
 library(harrypotter)
 library(tm)
+library(widyr)
 
 
 # example data (harry potter)
@@ -132,6 +133,21 @@ reviews %>%
   count(review_id, word) %>%
   cast_dtm(review_id, word, n) %>%
   findAssocs("izzy", .25)
+
+# find all pairwise correlation words
+ps_df %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  pairwise_cor(word, chapter, sort = TRUE)
+
+# find all pairwise correlation for more frequent words
+ps_df %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  group_by(word) %>%
+  filter(n() >= 20) %>%
+  pairwise_cor(word, chapter) %>%
+  filter(!is.na(correlation))
 
 # find words most correlated with "rooftop deck"
 reviews %>%
