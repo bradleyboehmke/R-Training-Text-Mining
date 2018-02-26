@@ -145,41 +145,63 @@ ps_df %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words) %>%
   group_by(word) %>%
-  filter(n() >= 20) %>%
+  filter(n() >= 50) %>%
   pairwise_cor(word, chapter) %>%
   filter(!is.na(correlation))
 
-# find words most correlated with "rooftop deck"
-reviews %>%
-  select(review_id, comments) %>%
-  unnest_tokens(word, comments, token = "ngrams", n = 2) %>%
-  separate(word, into = c("word1", "word2"), sep = " ") %>%
-  filter(
-    !word1 %in% stop_words$word,
-    !word2 %in% stop_words$word
-  ) %>%
-  unite(word, word1, word2, sep = " ") %>%
-  count(review_id, word) %>%
-  cast_dtm(review_id, word, n) %>%
-  findAssocs("rooftop deck", .15)
+# Find all word pairs that are frequently used (≥ 50) and highly correlated (> .80).
+ps_df %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  group_by(word) %>%
+  filter(n() >= 50) %>%
+  pairwise_cor(word, chapter) %>%
+  filter(correlation > .8)
 
 # we can use this information to create a word network
 
-library(qdap)
+library(igraph)
+library(ggraph)
 
-# filter for shorter reviews
-short_reviews <- reviews %>% 
-  mutate(words = str_count(comments)) %>% 
-  filter(words < 50) %>%
-  select(review_id, comments, neighborhood = neighbourhood_cleansed) 
+set.seed(123)
 
-word_network_plot(text.var = short_reviews$comments)
+ps_df %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  group_by(word) %>%
+  filter(n() >= 20) %>%
+  pairwise_cor(word, chapter) %>%
+  filter(
+    !is.na(correlation),
+    correlation > .65
+    ) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
 
-# word networks are primarily useful for small text or text without much 
-# word diversity
+# Your Turn!
+set.seed(123)
 
-
-
+reviews %>%
+  select(reviewer_id, comments) %>%
+  unnest_tokens(word, comments) %>%
+  anti_join(stop_words) %>%
+  group_by(word) %>%
+  filter(n() > 1) %>%
+  pairwise_cor(word, reviewer_id) %>%
+  filter(
+    !is.na(correlation),
+    correlation > .8
+  ) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
 
 # Cluster Analysis --------------------------------------------------------
 
