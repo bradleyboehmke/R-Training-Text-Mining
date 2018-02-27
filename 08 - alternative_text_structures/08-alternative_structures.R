@@ -225,7 +225,7 @@ dim(resumes_dtm)
 resumes_dtm[1:5, 1:5]
 
 # we can measure the "similarity" between each document based on word usage
-distance1 <- get_dist(resumes_dtm)
+distance <- get_dist(resumes_dtm)
 fviz_dist(distance, gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
 
 # identify 3 clusters
@@ -235,13 +235,13 @@ table(k3$cluster)
 
 # is there an optimal number of clusters?
 set.seed(123)
-fviz_nbclust(resumes_dtm, kmeans, method = "wss")
+fviz_nbclust(resumes_dtm, kmeans, method = "wss", k.max = 49)
 fviz_nbclust(resumes_dtm, kmeans, method = "silhouette")
 
 
 # let's look at a different type of clustering - Spherical k-means clustering
 library(skmeans)
-library(clue)
+library(cluster)
 
 sk3 <- skmeans(resumes_dtm, 3, m = 1.2, control = list(nruns = 5, verbose = TRUE))
 str(sk3)
@@ -333,10 +333,10 @@ sk8_df <- t(cl_prototypes(sk8))
 sk8_df %>%
   as_tibble() %>%
   mutate(word = row.names(sk8_df)) %>%
-  gather(k, silhouette, -word) %>%
+  gather(k, score, -word) %>%
   group_by(k) %>%
   top_n(10) %>%
-  ggplot(aes(silhouette, reorder(word, silhouette))) +
+  ggplot(aes(score, reorder(word, score))) +
   geom_point() +
   facet_wrap(~ k, scales = "free_y")
 
@@ -384,7 +384,7 @@ df_dtm <- series %>%
   count(document, word) %>%
   cast_dtm(document, word, n)
 
-# LDA on satisfaction categories
+# LDA across each chapter in the Harry Potter series
 levels_lda <- LDA(df_dtm, k = 7, control = list(seed = 1234))
 levels_lda
 
