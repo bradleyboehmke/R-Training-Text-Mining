@@ -99,7 +99,7 @@ plot(auc.lasso)
 confusion <- table(pred.lasso, train.y)
 confusion
 
-## overall accuracy
+# overall accuracy
 sum(diag(confusion)) / sum(confusion)
 
 
@@ -162,13 +162,13 @@ ggplot(tuning, aes(alpha, accuracy)) +
   geom_line() +
   ylim(c(0, 1))
 
-tuning %>% filter(alpha == .5)
+tuning %>% filter(alpha > .6 & alpha < .75)
 
-# let's predict on the test set
+# let's apply an elastic net with alpha = .65
 cv <- cv.glmnet(
   x = train.x,
   y = as.factor(train.y),
-  alpha = .5,
+  alpha = .65,
   family = "binomial",
   nfolds = 10,
   type.measure = "class"
@@ -188,8 +188,20 @@ confusion
 ## overall accuracy
 sum(diag(confusion)) / sum(confusion)
 
-plot(auc.lasso, main = "Black = Train, Red = Test")
-plot(auc, add = TRUE, col = "red", lty = 2)
+# comparing all three options
+ridge <- cv.glmnet(x = train.x, y = as.factor(train.y), alpha = 0, family = "binomial", nfolds = 10, type.measure = "class")
+lasso <- cv.glmnet(x = train.x, y = as.factor(train.y), alpha = 1, family = "binomial", nfolds = 10, type.measure = "class")
+elast <- cv.glmnet(x = train.x, y = as.factor(train.y), alpha = .65, family = "binomial", nfolds = 10, type.measure = "class")
+rpred <- predict(ridge, test.x, type = "class", s = cv$lambda.1se)
+lpred <- predict(lasso, test.x, type = "class", s = cv$lambda.1se)
+epred <- predict(elast, test.x, type = "class", s = cv$lambda.1se)
+r_auc <- roc(test.y, as.numeric(rpred))
+l_auc <- roc(test.y, as.numeric(lpred))
+e_auc <- roc(test.y, as.numeric(epred))
+
+plot(r_auc, col = "grey70", main = "Grey solid = Ridge, Grey dotted = Lasso, Red = Elastic")
+plot(l_auc, add = TRUE, col = "grey70", lty = 3)
+plot(e_auc, add = TRUE, col = "red", lty = 2)
 
 # finding the most impactful words
 glmnet.coef <- as.matrix(coef(cv, s = "lambda.min"))
