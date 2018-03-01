@@ -27,10 +27,10 @@ headlines_tidy <- headlines %>%
   count(url, partition, y, word) %>%
   mutate(id = paste(url, partition, sep = "_"))
 
-headlines_dtm <- headlines_tidy %>% cast_dtm(id, word, n)
-
-# convert to a matrix
-headlines_matrix <- as.matrix(headlines_dtm)
+# convert to a DTM matrix
+headlines_matrix <-  headlines_tidy %>% 
+  cast_dtm(id, word, n) %>%
+  as.matrix()
 
 # training split
 train.x <- headlines_matrix %>%
@@ -46,11 +46,13 @@ train.y <- headlines_tidy %>%
   distinct(id, y) %>%
   .$y
 
-dim(train)
-train[1:5, 1:5]
+dim(train.x)
+train.x[1:5, 1:5]
 table(train.y)
 
-# testing split
+# YOUR TURN!
+## ou created the training split, now can you do the same thing to create the 
+## test split?
 test.x <- headlines_matrix %>%
   as_data_frame() %>%
   mutate(id = row.names(headlines_matrix)) %>%
@@ -64,13 +66,15 @@ test.y <- headlines_tidy %>%
   distinct(id, y) %>%
   .$y
 
-dim(test)
-test[1:5, 1:5]
+dim(test.x)
+test.x[1:5, 1:5]
 table(test.y)
 
 # Modeling ----------------------------------------------------------------
 
 # apply Lasso model
+set.seed(123)
+
 cv.lasso <- cv.glmnet(
   x = train.x,
   y = as.factor(train.y),
@@ -102,6 +106,8 @@ sum(diag(confusion)) / sum(confusion)
 
 # YOUR TURN!
 # apply Ridge model
+set.seed(123)
+
 cv.ridge <- cv.glmnet(
   x = train.x,
   y = as.factor(train.y),
@@ -132,18 +138,18 @@ sum(diag(confusion)) / sum(confusion)
 
 # Let's assess how an elastic net compares
 tuning <- expand.grid(
-  lambda = seq(0, 1, by = .01),
+  alpha    = seq(0, 1, by = .01),
   accuracy = NA
 )
 
-for(i in seq_along(tuning$lambda)) {
+for(i in seq_along(tuning$alpha)) {
   
   set.seed(123)
   
   cv <- cv.glmnet(
     x = train.x,
     y = as.factor(train.y),
-    alpha = tuning$lambda[i],
+    alpha = tuning$alpha[i],
     family = "binomial",
     nfolds = 10,
     intercept = FALSE,
@@ -155,7 +161,7 @@ for(i in seq_along(tuning$lambda)) {
   tuning$accuracy[i] <- sum(diag(confusion)) / sum(confusion)
 }
 
-ggplot(tuning, aes(lambda, accuracy)) +
+ggplot(tuning, aes(alpha, accuracy)) +
   geom_line() +
   ylim(c(0, 1))
 
