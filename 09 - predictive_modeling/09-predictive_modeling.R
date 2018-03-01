@@ -81,7 +81,6 @@ cv.lasso <- cv.glmnet(
   alpha = 1,
   family = "binomial",
   nfolds = 10,
-  intercept = FALSE,
   type.measure = "class"
 )
 
@@ -114,7 +113,6 @@ cv.ridge <- cv.glmnet(
   alpha = 0,
   family = "binomial",
   nfolds = 10,
-  intercept = FALSE,
   type.measure = "class"
 )
 
@@ -152,7 +150,6 @@ for(i in seq_along(tuning$alpha)) {
     alpha = tuning$alpha[i],
     family = "binomial",
     nfolds = 10,
-    intercept = FALSE,
     type.measure = "class"
   )
   
@@ -165,7 +162,7 @@ ggplot(tuning, aes(alpha, accuracy)) +
   geom_line() +
   ylim(c(0, 1))
 
-tuning %>% filter(lambda == .5)
+tuning %>% filter(alpha == .5)
 
 # let's predict on the test set
 cv <- cv.glmnet(
@@ -174,7 +171,6 @@ cv <- cv.glmnet(
   alpha = .5,
   family = "binomial",
   nfolds = 10,
-  intercept = FALSE,
   type.measure = "class"
 )
 
