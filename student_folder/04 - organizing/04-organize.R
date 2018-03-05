@@ -35,10 +35,8 @@ text_tb
 # 1. Organize harrypotter::deathly_hallows into a tibble
 # 2. Organize harrypotter::chamber_of_secrets into a tibble
 # 3. Organize harrypotter::goblet_of_fire into a tibble
-tibble(
-  chapter = seq_along(deathly_hallows),
-  text    = deathly_hallows
-)
+
+
 
 # lets remove everything in our environment
 rm(list = ls())
@@ -85,12 +83,7 @@ all_3 <- tibble()
 
 for(i in seq_along(files)) {
   
-  name <- files[i]
-  path <- paste0("data/", name)
-  data <- read_tsv(path, col_names = FALSE) %>%
-    mutate(file = name) %>%
-    select(file, text = X1)
-  all_3 <- rbind(all_3, data)
+  # enter code here
   
 }
 
@@ -187,23 +180,7 @@ text_tb %>%
 
 # YOUR TURN!
 # Find the most common tri-grams in deathly_hallows
-tibble(
-  chapter = seq_along(deathly_hallows),
-  text    = deathly_hallows
-) %>%
-  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
-  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
-  filter(
-    !word1 %in% stop_words$word,
-    !word2 %in% stop_words$word,
-    !word3 %in% stop_words$word
-  ) %>%
-  count(word1, word2, word3, sort = TRUE) %>%
-  unite(trigram, word1:word3, sep = " ") %>%
-  top_n(10) %>%
-  ggplot(aes(reorder(trigram, n), n)) +
-  geom_col() +
-  coord_flip()
+
 
 
 

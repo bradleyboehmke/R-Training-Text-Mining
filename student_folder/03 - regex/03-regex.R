@@ -37,7 +37,7 @@ str_count(philosophers_stone, regex("boy", ignore_case = TRUE))
 
 # YOUR TURN!
 ## How many times are "Mr" and "Mrs" used in philosophers_stone?
-str_count(philosophers_stone, "Mr\\.\\s|Mrs\\.\\s") %>% sum
+
 
 
 # anchors
@@ -47,7 +47,7 @@ str_count(philosophers_stone, regex("end$", ignore_case = TRUE))
 
 # YOUR TURN!
 ## Extract all elements in deathly_hallows that start with "Harry"
-deathly_hallows[str_detect(deathly_hallows, "^Harry")]
+
 
 
 # special patterns
@@ -60,7 +60,7 @@ str_extract(philosophers_stone, ".[yz].")
 # YOUR TURN!
 ## How many times is the word “Harry” get followed by a word that starts with a 
 ## vowel in philosophers_stone?
-str_count(philosophers_stone, "Harry\\s[aeiou]") %>% sum
+
 
 
 # repetition
@@ -72,11 +72,11 @@ str_extract(philosophers_stone, "[aeiou]{3,4}")
 # YOUR TURN!
 ## 1. Without computer support, what is this finding: 
 ## str_count(philosophers_stone, regex("((no[[:punct:]])[ ]){3}", ignore_case = TRUE))
-str_count(philosophers_stone, regex("((no[[:punct:]])[ ]){3}", ignore_case = TRUE))
+
 
 ## 2. Extract the 25 characters that precede and follow the use of “Harry" in 
 ##    philosophers_stone
-str_extract_all(philosophers_stone, ".{25}Harry.{25}")
+
 
 
 # Regular Expressions within Data Frames ----------------------------------
@@ -103,22 +103,11 @@ airbnb %>%
 # YOUR TURN!
 ## 1. What is the average number of characters used in the name column?  What 
 ##    about the description column?
-airbnb %>%
-  select(name, description) %>%
-  mutate(
-    name_char = str_count(name),
-    desc_char = str_count(description)
-  ) %>%
-  summarise(
-    name_char = mean(name_char, na.rm = TRUE),
-    desc_char = mean(desc_char, na.rm = TRUE)
-  )
+
 
 ## 2. What is the most common name in the host_name column?
-airbnb %>% 
-  select(host_name) %>%
-  mutate(host_name = str_to_lower(host_name)) %>%
-  count(host_name, sort = TRUE)
+
+
 
 # filtering data frames
 airbnb %>%
@@ -129,12 +118,10 @@ airbnb %>%
 # YOUR TURN!
 ## 1. Using the house_rules column, how many observations (aka hosts) advocate for 
 ##    “no shoes”?
-airbnb %>%
-  tally(str_detect(house_rules, regex("no shoes", ignore_case = TRUE)))
+
 
 ## 2. How would you filter out these observations?
-airbnb %>%
-  filter(!str_detect(house_rules, regex("no shoes", ignore_case = TRUE)))
+
 
 # cleaning
 airbnb %>%
@@ -161,6 +148,5 @@ airbnb %>%
 
 titanic <- titanic::titanic_train %>% as_tibble()
 
-titanic %>%
-  mutate(Title = str_replace_all(Name, "(.*, )|(\\..*)", ""))
+
   
