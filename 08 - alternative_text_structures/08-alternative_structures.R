@@ -5,8 +5,6 @@
 library(tidyverse)
 library(tidytext)
 library(harrypotter)
-library(tm)
-library(widyr)
 
 
 # example data (harry potter)
@@ -116,6 +114,10 @@ reviews %>%
 
 
 # Word Networks -----------------------------------------------------------
+
+# additional packages
+library(tm)
+library(widyr)
 
 # convert to a document term matrix
 ps_dtm <- ps_df %>%
@@ -242,6 +244,7 @@ fviz_nbclust(resumes_dtm, kmeans, method = "silhouette")
 # let's look at a different type of clustering - Spherical k-means clustering
 library(skmeans)
 library(cluster)
+library(clue)
 
 sk3 <- skmeans(resumes_dtm, 3, m = 1.2, control = list(nruns = 5, verbose = TRUE))
 str(sk3)
@@ -327,12 +330,12 @@ for (i in 1:nrow(tuning_grid)) {
 }
 
 tuning_grid %>% filter(silhouette == max(silhouette))
-sk8 <- skmeans(articles_dtm, 8, m = 1.1, control = list(nruns = 5, verbose = TRUE))
-sk8_df <- t(cl_prototypes(sk8))
+sk9 <- skmeans(articles_dtm, 9, m = 1.1, control = list(nruns = 5, verbose = TRUE))
+sk9_df <- t(cl_prototypes(sk9))
 
-sk8_df %>%
+sk9_df %>%
   as_tibble() %>%
-  mutate(word = row.names(sk8_df)) %>%
+  mutate(word = row.names(sk9_df)) %>%
   gather(k, score, -word) %>%
   group_by(k) %>%
   top_n(10) %>%
