@@ -53,22 +53,8 @@ table(train.y)
 # YOUR TURN!
 ## you created the training split, now can you do the same thing to create the 
 ## test split?
-test.x <- headlines_matrix %>%
-  as_data_frame() %>%
-  mutate(id = row.names(headlines_matrix)) %>%
-  filter(str_detect(id, "_Test")) %>%
-  select(-id) %>%
-  as.matrix() %>%
-  Matrix::Matrix(sparse = TRUE)
 
-test.y <- headlines_tidy %>% 
-  filter(partition == "Test") %>%
-  distinct(id, y) %>%
-  .$y
 
-dim(test.x)
-test.x[1:5, 1:5]
-table(test.y)
 
 # Modeling ----------------------------------------------------------------
 
@@ -105,34 +91,9 @@ sum(diag(confusion)) / sum(confusion)
 
 # YOUR TURN!
 # apply Ridge model
-set.seed(123)
 
-cv.ridge <- cv.glmnet(
-  x = train.x,
-  y = as.factor(train.y),
-  alpha = 0,
-  family = "binomial",
-  nfolds = 10,
-  type.measure = "class"
-)
 
-# plot misclassification error
-plot(cv.ridge)
 
-# predict ridge
-pred.ridge <- predict(cv.ridge, train.x, type = "class", s = cv.ridge$lambda.1se)
-
-# area under the curve
-auc.ridge <- roc(train.y, as.numeric(pred.ridge))
-auc.ridge
-plot(auc.ridge)
-
-# confusion matrix
-confusion <- table(pred.ridge, train.y)
-confusion
-
-## overall accuracy
-sum(diag(confusion)) / sum(confusion)
 
 # Let's assess how an elastic net compares
 tuning <- expand.grid(
